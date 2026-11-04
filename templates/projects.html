@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}
+Danh sách dự án
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">
+            Dự án của tôi
+        </h1>
+
+        <p class="text-muted mb-0">
+            Các dự án bạn đang tham gia.
+        </p>
+    </div>
+
+    <a
+        href="{{ url_for('create_project') }}"
+        class="btn btn-primary"
+    >
+        Tạo dự án
+    </a>
+</div>
+
+{% if memberships %}
+    <div class="row g-3">
+        {% for membership in memberships %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <div
+                            class="d-flex justify-content-between align-items-start"
+                        >
+                            <h2 class="h5">
+                                {{ membership.project.name }}
+                            </h2>
+
+                            {% if membership.role == "LEADER" %}
+                                <span class="badge bg-primary">
+                                    Trưởng nhóm
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    Thành viên
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <p class="text-muted">
+                            {% if membership.project.description %}
+                                {{ membership.project.description }}
+                            {% else %}
+                                Dự án chưa có mô tả.
+                            {% endif %}
+                        </p>
+
+                        <p class="mb-1">
+                            <strong>Trạng thái:</strong>
+
+                            {% if membership.project.status == "ACTIVE" %}
+                                Đang hoạt động
+                            {% else %}
+                                Đã lưu trữ
+                            {% endif %}
+                        </p>
+
+                        <p class="mb-0">
+                            <strong>Hạn dự kiến:</strong>
+
+                            {% if membership.project.due_date %}
+                                {{ membership.project.due_date.strftime("%d/%m/%Y") }}
+                            {% else %}
+                                Chưa thiết lập
+                            {% endif %}
+                        </p>
+                                                <a
+                            href="{{ url_for(
+                                'project_detail',
+                                project_id=membership.project.id
+                            ) }}"
+                            class="btn btn-outline-primary mt-3"
+                        >
+                            Xem dự án
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        Bạn chưa tham gia dự án nào.
+    </div>
+{% endif %}
+{% endblock %}

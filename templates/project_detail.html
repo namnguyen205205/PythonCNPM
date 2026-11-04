@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ project.name }}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <h1 class="h3 mb-0">
+                {{ project.name }}
+            </h1>
+
+            {% if membership.role == "LEADER" %}
+                <span class="badge bg-primary">
+                    Trưởng nhóm
+                </span>
+            {% else %}
+                <span class="badge bg-secondary">
+                    Thành viên
+                </span>
+            {% endif %}
+        </div>
+
+        <p class="text-muted mb-0">
+            {% if project.description %}
+                {{ project.description }}
+            {% else %}
+                Dự án chưa có mô tả.
+            {% endif %}
+        </p>
+    </div>
+
+<div class="d-flex gap-2">
+    {% if membership.role == "LEADER" %}
+        <a
+            href="{{ url_for(
+                'edit_project',
+                project_id=project.id
+            ) }}"
+            class="btn btn-primary"
+        >
+            Sửa dự án
+        </a>
+    {% endif %}
+
+    <a
+        href="{{ url_for('projects') }}"
+        class="btn btn-outline-secondary"
+    >
+        Quay lại
+    </a>
+</div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h5">
+                    Thông tin dự án
+                </h2>
+
+                <p>
+                    <strong>Trạng thái:</strong>
+
+                    {% if project.status == "ACTIVE" %}
+                        Đang hoạt động
+                    {% else %}
+                        Đã lưu trữ
+                    {% endif %}
+                </p>
+
+                <p>
+                    <strong>Hạn dự kiến:</strong>
+
+                    {% if project.due_date %}
+                        {{ project.due_date.strftime("%d/%m/%Y") }}
+                    {% else %}
+                        Chưa thiết lập
+                    {% endif %}
+                </p>
+
+                <p class="mb-0">
+                    <strong>Ngày tạo:</strong>
+                    {{ project.created_at.strftime("%d/%m/%Y") }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h5">
+                    Quyền của bạn
+                </h2>
+
+                {% if membership.role == "LEADER" %}
+                    <p>
+                        Bạn là trưởng nhóm và có quyền quản lý dự án.
+                    </p>
+                {% else %}
+                    <p>
+                        Bạn là thành viên và có quyền xem nội dung dự án.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
