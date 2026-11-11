@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # Service 1: Cơ sở dữ liệu PostgreSQL 16
+  db:
+    image: postgres:16-alpine
+    container_name: spm_postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: spm_db
+      POSTGRES_USER: spm_user
+      POSTGRES_PASSWORD: spm_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Mount file database.sql để PostgreSQL tự động khởi tạo bảng & dữ liệu mẫu:
+      - ./database.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+
+  # Service 2: Ứng dụng Flask
+  web:
+    build: .
+    container_name: spm_flask_app
+    restart: always
+    environment:
+      - SECRET_KEY=chuoi-bi-mat-an-toan-cho-do-an-cnpm
+      - DATABASE_URL=postgresql+psycopg2://spm_user:spm_password@db:5432/spm_db
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

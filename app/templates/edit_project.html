@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-Tạo dự án
+Sửa dự án
 {% endblock %}
 
 {% block content %}
@@ -10,7 +10,7 @@ Tạo dự án
         <div class="card shadow-sm">
             <div class="card-body p-4">
                 <h1 class="h3 mb-4">
-                    Tạo dự án mới
+                    Sửa thông tin dự án
                 </h1>
 
                 <form method="post">
@@ -24,7 +24,7 @@ Tạo dự án
                             id="name"
                             name="name"
                             class="form-control"
-                            value="{{ request.form.get('name', '') }}"
+                            value="{{ project.name }}"
                             maxlength="150"
                             required
                         >
@@ -40,7 +40,7 @@ Tạo dự án
                             name="description"
                             class="form-control"
                             rows="4"
-                        >{{ request.form.get('description', '') }}</textarea>
+                        >{{ project.description or '' }}</textarea>
                     </div>
 
                     <div class="mb-3">
@@ -53,7 +53,7 @@ Tạo dự án
                             id="due_date"
                             name="due_date"
                             class="form-control"
-                            value="{{ request.form.get('due_date', '') }}"
+                            value="{% if project.due_date %}{{ project.due_date.isoformat() }}{% endif %}"
                         >
                     </div>
 
@@ -62,11 +62,14 @@ Tạo dự án
                             type="submit"
                             class="btn btn-primary"
                         >
-                            Tạo dự án
+                            Lưu thay đổi
                         </button>
 
                         <a
-                            href="{{ url_for('projects') }}"
+                            href="{{ url_for(
+                                'projects.project_detail',
+                                project_id=project.id
+                            ) }}"
                             class="btn btn-outline-secondary"
                         >
                             Hủy

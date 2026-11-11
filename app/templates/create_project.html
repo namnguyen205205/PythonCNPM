@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-Sửa dự án
+Tạo dự án
 {% endblock %}
 
 {% block content %}
@@ -10,7 +10,7 @@ Sửa dự án
         <div class="card shadow-sm">
             <div class="card-body p-4">
                 <h1 class="h3 mb-4">
-                    Sửa thông tin dự án
+                    Tạo dự án mới
                 </h1>
 
                 <form method="post">
@@ -24,7 +24,7 @@ Sửa dự án
                             id="name"
                             name="name"
                             class="form-control"
-                            value="{{ project.name }}"
+                            value="{{ request.form.get('name', '') }}"
                             maxlength="150"
                             required
                         >
@@ -40,7 +40,7 @@ Sửa dự án
                             name="description"
                             class="form-control"
                             rows="4"
-                        >{{ project.description or '' }}</textarea>
+                        >{{ request.form.get('description', '') }}</textarea>
                     </div>
 
                     <div class="mb-3">
@@ -53,7 +53,7 @@ Sửa dự án
                             id="due_date"
                             name="due_date"
                             class="form-control"
-                            value="{% if project.due_date %}{{ project.due_date.isoformat() }}{% endif %}"
+                            value="{{ request.form.get('due_date', '') }}"
                         >
                     </div>
 
@@ -62,14 +62,11 @@ Sửa dự án
                             type="submit"
                             class="btn btn-primary"
                         >
-                            Lưu thay đổi
+                            Tạo dự án
                         </button>
 
                         <a
-                            href="{{ url_for(
-                                'project_detail',
-                                project_id=project.id
-                            ) }}"
+                            href="{{ url_for('projects.create_project') }}"
                             class="btn btn-outline-secondary"
                         >
                             Hủy

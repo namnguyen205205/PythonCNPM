@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }}{% endblock %}
+
+{% block content %}
+<!-- HEADER DỰ ÁN -->
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <h1 class="h3 mb-0">{{ project.name }}</h1>
+            {% if membership %}
+                {% if membership.role == "LEADER" %}
+                    <span class="badge bg-primary">Trưởng nhóm</span>
+                {% else %}
+                    <span class="badge bg-secondary">Thành viên</span>
+                {% endif %}
+            {% elif current_user.is_admin %}
+                <span class="badge bg-danger">Xem với quyền Quản trị viên</span>
+            {% endif %}
+        </div>
+        <p class="text-muted mb-0">{{ project.description or "Dự án chưa có mô tả." }}</p>
+    </div>
+
+    <div class="d-flex gap-2">
+        {% if membership and membership.role == "LEADER" %}
+            <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-pencil"></i> Sửa dự án
+            </a>
+        {% endif %}
+        <a href="{{ url_for('projects.list_projects') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Quay lại
+        </a>
+    </div>
+</div>
+
+<!-- THÔNG BÁO DUYỆT CỦA ADMIN -->
+{% if project.approval_status == 'PENDING' %}
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+        <i class="bi bi-hourglass-split me-2 fs-5"></i>
+        <div>
+            <strong>Dự án đang chờ duyệt:</strong> Quản trị viên đang xem xét dự án này. Sau khi được duyệt, bạn mới có thể thêm thành viên và tạo công việc.
+        </div>
+    </div>
+{% elif project.approval_status == 'REJECTED' %}
+    <div class="alert alert-danger" role="alert">
+        <div class="d-flex align-items-center mb-1">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <strong>Dự án đã bị Quản trị viên từ chối:</strong>
+        </div>
+        <div class="ms-4">
+            <em>"{{ project.reject_reason or "Không có lý do cụ thể." }}"</em>
+        </div>
+        <div class="ms-4 mt-2 small text-muted">
+            Vui lòng nhấn nút <strong>Sửa dự án</strong> để cập nhật lại thông tin và gửi duyệt lại.
+        </div>
+    </div>
+{% endif %}
+
+<!-- THÔNG TIN CHUNG VÀ VAI TRÒ -->
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Thông tin dự án</h2>
+                <p class="mb-2">
+                    <strong>Trạng thái hoạt động:</strong>
+                    {% if project.status == "ACTIVE" %}
+                        <span class="badge bg-success">Đang hoạt động</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Đã lưu trữ</span>
+                    {% endif %}
+                </p>
+                <p class="mb-2">
+                    <strong>Tình trạng phê duyệt:</strong>
+                    {% if project.approval_status == 'PENDING' %}
+                        <span class="badge bg-warning text-dark">Chờ duyệt</span>
+                    {% elif project.approval_status == 'APPROVED' %}
+                        <span class="badge bg-success">Đã duyệt</span>
+                    {% elif project.approval_status == 'REJECTED' %}
+                        <span class="badge bg-danger">Bị từ chối</span>
+                    {% endif %}
+                </p>
+                <p class="mb-2">
+                    <strong>Hạn dự kiến:</strong>
+                    {{ project.due_date.strftime("%d/%m/%Y") if project.due_date else "Chưa thiết lập" }}
+                </p>
+                <p class="mb-0">
+                    <strong>Ngày tạo:</strong>
+                    {{ project.created_at.strftime("%d/%m/%Y") }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Vai trò của bạn</h2>
+                {% if membership %}
+                    {% if membership.role == "LEADER" %}
+                        <p class="text-success fw-semibold"><i class="bi bi-check-circle"></i> Bạn là Trưởng nhóm của dự án này.</p>
+                        <p class="text-muted small mb-0">Bạn có toàn quyền quản lý thành viên, tạo và phân công các đầu việc học tập.</p>
+                    {% else %}
+                        <p class="text-primary fw-semibold"><i class="bi bi-check-circle"></i> Bạn là Thành viên của dự án này.</p>
+                        <p class="text-muted small mb-0">Bạn có thể xem các công việc được giao và báo cáo tiến độ công việc của mình.</p>
+                    {% endif %}
+                {% elif current_user.is_admin %}
+                    <p class="text-danger fw-semibold"><i class="bi bi-shield-check"></i> Bạn đang truy cập với tư cách Quản trị viên hệ thống.</p>
+                    <p class="text-muted small mb-0">Bạn có quyền giám sát, phê duyệt hoặc từ chối dự án này.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KHỐI 1: THÀNH VIÊN NHÓM (PB08) -->
+<div class="card mt-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-people"></i> Thành viên nhóm ({{ project.memberships|length }})</span>
+        {% if membership and membership.role == "LEADER" and project.approval_status == 'APPROVED' %}
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+                <i class="bi bi-person-plus"></i> Thêm thành viên
+            </button>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Họ và tên</th>
+                        <th>Email</th>
+                        <th>Vai trò</th>
+                        <th>Ngày tham gia</th>
+                        {% if membership and membership.role == "LEADER" %}
+                            <th class="text-center" style="width: 15%;">Hành động</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in project.memberships %}
+                        <tr>
+                            <td class="fw-semibold">{{ m.user.full_name }}</td>
+                            <td>{{ m.user.email }}</td>
+                            <td>
+                                {% if m.role == "LEADER" %}
+                                    <span class="badge bg-primary">Trưởng nhóm</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Thành viên</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">{{ m.joined_at.strftime("%d/%m/%Y") }}</td>
+                            {% if membership and membership.role == "LEADER" %}
+                                <td class="text-center">
+                                    {% if m.role != "LEADER" %}
+                                        <form method="POST" action="{{ url_for('projects.remove_member', project_id=project.id, user_id=m.user.id) }}" onsubmit="return confirm('Bạn có chắc muốn loại thành viên này khỏi dự án?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i> Xóa
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-muted small">Chủ sở hữu</span>
+                                    {% endif %}
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- KHỐI 2: TIẾN ĐỘ DỰ ÁN (PB16) -->
+<div class="card mt-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h2 class="h6 mb-0 fw-bold"><i class="bi bi-graph-up"></i> Tiến độ hoàn thành đồ án</h2>
+            <span class="badge bg-primary fs-6">{{ project.progress_percentage }}%</span>
+        </div>
+        <div class="progress" style="height: 12px;">
+            <div class="progress-bar progress-bar-striped bg-success" role="progressbar" 
+                 style="width: {{ project.progress_percentage }}%;" 
+                 aria-valuenow="{{ project.progress_percentage }}" aria-valuemin="0" aria-valuemax="100">
+            </div>
+        </div>
+        <div class="text-muted small mt-2">
+            Đã hoàn thành {{ project.tasks|selectattr("status", "equalto", "DONE")|list|length }} / {{ project.tasks|length }} công việc.
+        </div>
+    </div>
+</div>
+
+<!-- KHỐI 3: DANH SÁCH CÔNG VIỆC (PB10, PB11, PB13, PB17) -->
+<div class="card mt-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-list-task"></i> Danh sách công việc ({{ project.tasks|length }})</span>
+        {% if membership and membership.role == "LEADER" and project.approval_status == 'APPROVED' %}
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+                <i class="bi bi-plus-lg"></i> Tạo công việc
+            </button>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        {% if project.tasks %}
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 25%;">Công việc</th>
+                            <th>Người phụ trách</th>
+                            <th style="width: 12%;">Ưu tiên</th>
+                            <th style="width: 15%;">Hạn chót</th>
+                            <th style="width: 18%;">Trạng thái</th>
+                            {% if membership and membership.role == "LEADER" %}
+                                <th class="text-center" style="width: 10%;">Xóa</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in project.tasks %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">{{ task.title }}</div>
+                                    <small class="text-muted">{{ task.description or "Không có mô tả" }}</small>
+                                </td>
+                                <td>
+                                    {% if task.assignee %}
+                                        <i class="bi bi-person"></i> {{ task.assignee.full_name }}
+                                    {% else %}
+                                        <span class="text-muted font-italic">Chưa phân công</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if task.priority == 'HIGH' %}
+                                        <span class="badge bg-danger">Cao</span>
+                                    {% elif task.priority == 'MEDIUM' %}
+                                        <span class="badge bg-warning text-dark">Trung bình</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Thấp</span>
+                                    {% endif %}
+                                </td>
+                                <td class="small">
+                                    {{ task.due_date.strftime("%d/%m/%Y") if task.due_date else "Chưa đặt" }}
+                                </td>
+                                <td>
+                                    {% if (membership and membership.role == "LEADER") or task.assignee_id == current_user.id %}
+                                        <form method="POST" action="{{ url_for('tasks.update_status', task_id=task.id) }}" class="d-inline">
+                                            <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                                                <option value="TODO" {% if task.status == 'TODO' %}selected{% endif %}>Chưa làm</option>
+                                                <option value="IN_PROGRESS" {% if task.status == 'IN_PROGRESS' %}selected{% endif %}>Đang làm</option>
+                                                <option value="DONE" {% if task.status == 'DONE' %}selected{% endif %}>Hoàn thành</option>
+                                            </select>
+                                        </form>
+                                    {% else %}
+                                        {% if task.status == 'DONE' %}
+                                            <span class="badge bg-success">Hoàn thành</span>
+                                        {% elif task.status == 'IN_PROGRESS' %}
+                                            <span class="badge bg-primary">Đang làm</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Chưa làm</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                {% if membership and membership.role == "LEADER" %}
+                                    <td class="text-center">
+                                        <form method="POST" action="{{ url_for('tasks.delete_task', task_id=task.id) }}" onsubmit="return confirm('Bạn có chắc muốn xóa công việc này?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-3 text-muted text-center">Dự án chưa có công việc nào. Hãy bấm <strong>Tạo công việc</strong> để phân chia nhiệm vụ!</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- KHỐI 4: BẢNG THẢO LUẬN NHÓM (PB20) -->
+<div class="card mt-4 mb-4">
+    <div class="card-header bg-white fw-bold">
+        <i class="bi bi-chat-left-dots"></i> Bảng trao đổi nội bộ nhóm ({{ project.discussions|length }})
+    </div>
+    <div class="card-body">
+        {% if project.discussions %}
+            <div class="d-flex flex-column gap-3 mb-4" style="max-height: 400px; overflow-y: auto;">
+                {% for msg in project.discussions %}
+                    <div class="p-3 border rounded {% if msg.user_id == current_user.id %}bg-light border-primary{% else %}bg-white{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-semibold text-primary">
+                                <i class="bi bi-person-circle"></i> {{ msg.author.full_name }}
+                                {% if msg.user_id == project.created_by %}
+                                    <span class="badge bg-primary text-white ms-1 small">Trưởng nhóm</span>
+                                {% endif %}
+                            </span>
+                            <span class="small text-muted">{{ msg.created_at.strftime("%d/%m/%Y lúc %H:%M") }}</span>
+                        </div>
+                        <div class="text-dark" style="white-space: pre-wrap;">{{ msg.content }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="p-3 text-muted text-center border rounded mb-3">
+                Chưa có trao đổi nào. Hãy là người đầu tiên để lại lời nhắn cho nhóm!
+            </div>
+        {% endif %}
+
+        {% if membership or current_user.is_admin %}
+            <form method="POST" action="{{ url_for('projects.create_discussion', project_id=project.id) }}">
+                <div class="mb-2">
+                    <textarea name="content" class="form-control" rows="3" required placeholder="Nhập nội dung thảo luận, phân chia tài liệu, báo cáo công việc..."></textarea>
+                </div>
+                <div class="text-end">
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="bi bi-send"></i> Gửi thảo luận
+                    </button>
+                </div>
+            </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- MODAL THÊM THÀNH VIÊN -->
+{% if membership and membership.role == "LEADER" %}
+<div class="modal fade" id="addMemberModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('projects.add_member', project_id=project.id) }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Thêm thành viên vào dự án</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Email sinh viên:</label>
+                        <input type="email" name="email" class="form-control" required placeholder="Ví dụ: banhoc@gmail.com">
+                        <div class="form-text">Sinh viên phải có tài khoản đã đăng ký trong hệ thống.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Thêm vào nhóm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL TẠO CÔNG VIỆC MỚI -->
+<div class="modal fade" id="createTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('tasks.create_task', project_id=project.id) }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Giao công việc mới</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tiêu đề công việc (*):</label>
+                        <input type="text" name="title" class="form-control" required placeholder="Ví dụ: Thiết kế cơ sở dữ liệu">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mô tả chi tiết:</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Yêu cầu cụ thể cần làm..."></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Mức ưu tiên:</label>
+                            <select name="priority" class="form-select">
+                                <option value="LOW">Thấp</option>
+                                <option value="MEDIUM" selected>Trung bình</option>
+                                <option value="HIGH">Cao</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Hạn hoàn thành:</label>
+                            <input type="date" name="due_date" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phân công cho thành viên:</label>
+                        <select name="assignee_id" class="form-select">
+                            <option value="">-- Chưa phân công --</option>
+                            {% for m in project.memberships %}
+                                <option value="{{ m.user.id }}">{{ m.user.full_name }} ({{ m.user.email }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Giao việc</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

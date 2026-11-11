@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Duyệt dự án - Quản trị{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Phê duyệt Dự án</h1>
+        <p class="text-muted mb-0">Xem xét và phê duyệt các dự án mới do sinh viên khởi tạo.</p>
+    </div>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Về Dashboard
+    </a>
+</div>
+
+<!-- Danh sách dự án chờ duyệt -->
+<div class="card mb-4">
+    <div class="card-header bg-white fw-bold">
+        <i class="bi bi-hourglass-split text-warning"></i> Dự án đang chờ duyệt ({{ pending_list|length }})
+    </div>
+    <div class="card-body p-0">
+        {% if pending_list %}
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 25%;">Tên dự án</th>
+                            <th>Mô tả</th>
+                            <th style="width: 15%;">Người tạo</th>
+                            <th style="width: 12%;">Hạn dự kiến</th>
+                            <th style="width: 18%;" class="text-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in pending_list %}
+                            <tr>
+                                <td class="fw-semibold">{{ project.name }}</td>
+                                <td class="small text-muted">{{ project.description or "Không có mô tả" }}</td>
+                                <td>{{ project.creator.full_name }}<br><small class="text-muted">{{ project.creator.email }}</small></td>
+                                <td>{{ project.due_date.strftime("%d/%m/%Y") if project.due_date else "Chưa đặt" }}</td>
+                                <td>
+                                    <div class="d-flex gap-1 justify-content-center">
+                                        <!-- Form Duyệt -->
+                                        <form method="POST" action="{{ url_for('admin.approve_project', project_id=project.id) }}" onsubmit="return confirm('Bạn có chắc chắn muốn DUYỆT dự án này?');">
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="bi bi-check-lg"></i> Duyệt
+                                            </button>
+                                        </form>
+                                        <!-- Nút mở Modal Từ chối -->
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ project.id }}">
+                                            <i class="bi bi-x-lg"></i> Từ chối
+                                        </button>
+                                    </div>
+
+                                    <!-- Modal nhập lý do từ chối -->
+                                    <div class="modal fade" id="rejectModal{{ project.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <form method="POST" action="{{ url_for('admin.reject_project', project_id=project.id) }}">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Từ chối dự án: {{ project.name }}</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="mb-3">
+                                                            <label class="form-label">Lý do từ chối (bắt buộc):</label>
+                                                            <textarea name="reject_reason" class="form-control" rows="3" required placeholder="Ví dụ: Tên đề tài chưa rõ ràng..."></textarea>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                                                        <button type="submit" class="btn btn-danger btn-sm">Xác nhận Từ chối</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-3 text-muted text-center">Hiện không có dự án nào đang chờ duyệt.</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Lịch sử xét duyệt gần đây -->
+<div class="card">
+    <div class="card-header bg-white fw-bold">
+        <i class="bi bi-clock-history"></i> Lịch sử xét duyệt gần đây
+    </div>
+    <div class="card-body p-0">
+        {% if history_list %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Tên dự án</th>
+                            <th>Trạng thái</th>
+                            <th>Người duyệt</th>
+                            <th>Thời điểm</th>
+                            <th>Ghi chú / Lý do</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in history_list %}
+                            <tr>
+                                <td>{{ p.name }}</td>
+                                <td>
+                                    {% if p.approval_status == 'APPROVED' %}
+                                        <span class="badge bg-success">Đã duyệt</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Bị từ chối</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ p.reviewer.full_name if p.reviewer else "Admin" }}</td>
+                                <td>{{ p.reviewed_at.strftime("%d/%m/%Y %H:%M") if p.reviewed_at else "" }}</td>
+                                <td class="small text-muted">{{ p.reject_reason or "-" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-3 text-muted text-center">Chưa có lịch sử xét duyệt.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

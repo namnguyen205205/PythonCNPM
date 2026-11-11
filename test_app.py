@@ -1,7 +1,6 @@
 import os
 import unittest
 
-
 # Phải thiết lập trước khi import app.
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["SECRET_KEY"] = "test-secret-key"
@@ -170,4 +169,3 @@ class Sprint1TestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    

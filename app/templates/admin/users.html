@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý Người dùng - Quản trị{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Quản lý Tài khoản Sinh viên</h1>
+        <p class="text-muted mb-0">Tìm kiếm, theo dõi và khóa/mở tài khoản người dùng.</p>
+    </div>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Về Dashboard
+    </a>
+</div>
+
+<!-- Khung tìm kiếm -->
+<div class="card p-3 mb-4">
+    <form method="GET" action="{{ url_for('admin.users_list') }}" class="row g-2">
+        <div class="col-md-8">
+            <input type="text" name="q" class="form-control" placeholder="Tìm kiếm theo họ tên hoặc email..." value="{{ search }}">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Tìm kiếm</button>
+        </div>
+        {% if search %}
+            <div class="col-md-2">
+                <a href="{{ url_for('admin.users_list') }}" class="btn btn-outline-secondary w-100">Bỏ lọc</a>
+            </div>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Bảng người dùng -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Họ và tên</th>
+                        <th>Email</th>
+                        <th>Vai trò</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày đăng ký</th>
+                        <th class="text-center" style="width: 15%;">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                        <tr>
+                            <td class="fw-semibold">{{ user.full_name }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                {% if user.system_role == 'ADMIN' %}
+                                    <span class="badge bg-danger">Admin</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Sinh viên</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user.is_active %}
+                                    <span class="badge bg-success">Hoạt động</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Bị khóa</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">{{ user.created_at.strftime("%d/%m/%Y") }}</td>
+                            <td class="text-center">
+                                <form method="POST" action="{{ url_for('admin.toggle_user_status', user_id=user.id) }}" onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái tài khoản này?');">
+                                    {% if user.is_active %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-lock"></i> Khóa
+                                        </button>
+                                    {% else %}
+                                        <button type="submit" class="btn btn-sm btn-outline-success">
+                                            <i class="bi bi-unlock"></i> Mở khóa
+                                        </button>
+                                    {% endif %}
+                                </form>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted p-3">Không tìm thấy người dùng nào phù hợp.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
